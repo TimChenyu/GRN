@@ -14,13 +14,13 @@ class BoltzmannGRN():
     def __init__(self, size):
         self.time = 0
         self.size = size
-        self.relationProbability = 0.1
+        #self.relationProbability = 0.1
         #self.graph = gnp_random_connected_graph(self.size, self.relationProbability)
-        self.graph = gnp_random_graph(self.size, 4)
+        self.graph = gnp_random_graph(self.size, 5)
         self.matrix = make_wmatrix(self.graph, self.size)
         for node in self.graph.nodes:
             chance = random.random()
-            if chance > 0.9:
+            if chance > 0.99:
                 self.graph.nodes[node]["state"] = 1
             else:
                 self.graph.nodes[node]["state"] = 0
@@ -40,7 +40,7 @@ def make_wmatrix(G, size):
     for node in G.nodes():
         ycount = 0
         for neighbour in G.neighbors(node):
-            weight = random.random()
+            weight = 0.3#random.random()
             wmatrix[node][neighbour] = weight
     return wmatrix
 
@@ -163,11 +163,13 @@ def group_duplicate_index(df):
     I = df.index[sidx].tolist()
     return [I[i:j] for i,j in zip(idx[::2],idx[1::2]+1)]
 
-size = 20
+size = 100
 title = []
+listi = []
 for i in range(0, size):
     title.append(str(i))
-listi = ['0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0']
+    listi.append('0')
+#listi = ['0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0']
 test = BoltzmannGRN(size)
 #print(test.matrix)
 G = test.graph
@@ -175,24 +177,63 @@ t = 0
 
 
 #print(statedf)
+list_size = []
 list_states = []
-for t in range(0, 10000):
+state_time = []
+time = []
+timestep = 0
+state_num = 0
+for t in range(0, 100):
+    """if t%5000 == 0:
+        #print(state_time)
+        plt.rcParams["figure.figsize"] = [17.50, 3.50]
+        plt.rcParams["figure.autolayout"] = True
+        plt.plot(time, state_time, 'r*')
+        plt.show()"""
+    time.append(timestep)
+    timestep += 1
     states = []
     update(G, test)
     for node in G.nodes:
         s = G.nodes[node]["state"]
         #print(s)
         states.append(s)
+        sums = sum(states)
+        sum_index = sums/size
+    """if states not in list_states:
+        state_time.append(state_num)
+        state_num += 1
+        max_state_num = state_num
+    if states in list_states:
+        state_num = list_states.index(states)
+        print('Timestep ' + str(t) + ' : hit state: ' + str(state_num))
+        state_time.append(state_num)
+        state_num = max_state_num"""
+    list_size.append(sum_index)
     list_states.append(states)
     #print(len(states))
-
-    print(states)
+    #print(states)
 df = pd.DataFrame(list_states, columns = listi)
 print(df)
+
+graphy = []
+for index, row in df.iterrows():
+    graphy.append(row.sum())
+
+print(state_time)
+plt.rcParams["figure.figsize"] = [17.50, 3.50]
+plt.rcParams["figure.autolayout"] = True
+plt.plot(time, list_size, 'r*')
+plt.show()
+
+
 duplicates = group_duplicate_index(df)
 print("==========================")
 print("Duplicated Rows")
-print(duplicates)
+for element in duplicates:
+    print(element)
+
+#print(duplicates)
 #nx.add_path(G, range(10))
 #nx.add_star(G, range(9, 13))
 #pos = nx.spring_layout(G, seed=225)  # Seed for reproducible layout
