@@ -130,7 +130,7 @@ def probability(gene, time, hit):
     return p
 
 def update():
-    print('fml')
+    print('')
 size = 100
 test = BoltzmannGRN(size)
 print(test.matrix)
