@@ -3,13 +3,14 @@ import networkx as nx
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
-
-class BoltzmannGRN():
 """
 定义一个玻尔兹曼机基因调控网络的类
 Define a Boltzmann Gene Regulatory Network Class
 """
+class BoltzmannGRN():
+
     def __init__(self, size):
         self.time = 0
         self.size = size
@@ -17,6 +18,12 @@ Define a Boltzmann Gene Regulatory Network Class
         #self.graph = gnp_random_connected_graph(self.size, self.relationProbability)
         self.graph = gnp_random_graph(self.size, 4)
         self.matrix = make_wmatrix(self.graph, self.size)
+        for node in self.graph.nodes:
+            chance = random.random()
+            if chance > 0.9:
+                self.graph.nodes[node]["state"] = 1
+            else:
+                self.graph.nodes[node]["state"] = 0
 
     def update(self):
         self.time += 1
@@ -28,12 +35,13 @@ def make_wmatrix(G, size):
         are added in this method, all edges have a weight of 1
     """
     nums = nx.get_node_attributes(G, "number")
-    print(nums)
+    #print(nums)
     wmatrix = np.zeros((size, size))
     for node in G.nodes():
         ycount = 0
         for neighbour in G.neighbors(node):
-            wmatrix[node][neighbour] = 1
+            weight = random.random()
+            wmatrix[node][neighbour] = weight
     return wmatrix
 
 def gnp_random_connected_graph(n, p):
@@ -87,11 +95,11 @@ def gnp_random_graph(n, max_nei):
     ooo = []
     for node in G.nodes:
         check = [n for n in G.neighbors(node)]
-        print(check)
+        #print(check)
         checks = len(check)
         ooo.append(checks)
-    print(ooo)
-    print(num_nei_list)
+    #print(ooo)
+    #print(num_nei_list)
 
     return G
 
@@ -102,7 +110,12 @@ def check_max(G, node, max):
         return False
 
 numGenes = 100
-def getHit(gene_i, time):
+
+def state(G, node):
+    state = G.nodes[node]["state"]
+    return state
+
+def getHit(G, gene_i, model):
     """
     Get the H_{i,t} value for gene i at timestep t
     ##############################################
@@ -111,12 +124,13 @@ def getHit(gene_i, time):
     2. time: The numerical timestep
     ##############################################
     """
-    for neighbour in gene:
-        phit = weight(gene_i, neighbour) * state(neighbour, time)
+    hit = 0
+    for neighbour in G.neighbors(gene_i):
+        phit = model.matrix[gene_i][neighbour] * state(G, neighbour)
         hit += phit
     return hit
 
-def probability(gene, time, hit):
+def probability(G, gene, hit, model):
     """
     Get the probability of a specific gene being on
     ##############################################
@@ -126,18 +140,61 @@ def probability(gene, time, hit):
     3. time: The numerical timestep
     ##############################################
     """
-    p = (1/(1+2.718281828459045**(getHit(gene, time)*(-1))))
+    p = (1/(1+2.718281828459045**(getHit(G, gene, model)*(-1))))
     return p
 
-def update():
-    print('')
-size = 100
-test = BoltzmannGRN(size)
-print(test.matrix)
-G = test.graph
+def update(G, model):
+    for node in G:
+        hit = getHit(G, node, model)
+        p = probability(G, node, hit, model)
+        chance = random.random()
+        if chance <= p:
+            G.nodes[node]["state"] = 1
+        else:
+            G.nodes[node]["state"] = 0
 
+def group_duplicate_index(df):
+    a = df.values
+    sidx = np.lexsort(a.T)
+    b = a[sidx]
+
+    m = np.concatenate(([False], (b[1:] == b[:-1]).all(1), [False] ))
+    idx = np.flatnonzero(m[1:] != m[:-1])
+    I = df.index[sidx].tolist()
+    return [I[i:j] for i,j in zip(idx[::2],idx[1::2]+1)]
+
+size = 20
+title = []
+for i in range(0, size):
+    title.append(str(i))
+listi = ['0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0']
+test = BoltzmannGRN(size)
+#print(test.matrix)
+G = test.graph
+t = 0
+
+
+#print(statedf)
+list_states = []
+for t in range(0, 10000):
+    states = []
+    update(G, test)
+    for node in G.nodes:
+        s = G.nodes[node]["state"]
+        #print(s)
+        states.append(s)
+    list_states.append(states)
+    #print(len(states))
+
+    print(states)
+df = pd.DataFrame(list_states, columns = listi)
+print(df)
+duplicates = group_duplicate_index(df)
+print("==========================")
+print("Duplicated Rows")
+print(duplicates)
 #nx.add_path(G, range(10))
 #nx.add_star(G, range(9, 13))
 #pos = nx.spring_layout(G, seed=225)  # Seed for reproducible layout
-nx.draw(G)
-plt.show()
+#nx.draw(G)
+#plt.show()
