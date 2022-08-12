@@ -4,7 +4,35 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+from networkx import is_connected, connected_components
 
+
+def makeDistanceMatrix(G, size):
+    Distance_Matrix = np.zeros((size, size))
+    for node in G.nodes():
+        p = nx.shortest_path(G, source=node)
+        for node1 in G.nodes():
+            if node != node1:
+                try:
+                    distance = len(p[node1])
+                except KeyError:
+                    G.add_edge(node, node1)
+                    p = nx.shortest_path(G, source=node)
+                    distance = len(p[node1])
+                    print('hit')
+
+                Distance_Matrix[node-1][node1-1] = distance
+    return Distance_Matrix
+def generate_Gene_tree(n):
+    G=nx.Graph()
+    G.add_node(0)
+    for i in range(1, n):
+        num = G.number_of_nodes()
+        print(num)
+        G.add_node(i)
+        toConnect = random.randint(0, num-1)
+        G.add_edge(toConnect, i)
+    return G
 def add_nodes(G, parent, num_to_add):
     num_Nodes = G.number_of_nodes()
     nodes_to_add = []
@@ -13,83 +41,61 @@ def add_nodes(G, parent, num_to_add):
     for node in nodes_to_add:
         G.add_edge(parent, node)
 
-def generate_gene_network(maxNodes, p_split, p_3):
-    """
-    generate a tree with depth n
-
-    each level can have a maximum of 6n + 1 nodes
-
-    first generate a center node
-        if max depth not reached:
-            generate 0-> 6n+1 nodes:
-                distribute the nodes across the nodes
-                nodes remaining = 6n+1
-                for nodes in this level:
-                    num child = random(0, nodes remaining)
-                    nodes remaining = nodes remanining - numchild
-
-    """
-    G = nx.path_graph(1)
-    num_Nodes = G.number_of_nodes()
-    parentNodes = []
-    newparents = []
-    if random.random() > p_3:
-        add_nodes(G, 0, 3)
-        num_Nodes = G.number_of_nodes()
-        for n in range(1, 3):
-            parentNodes.append(num_Nodes-n)
-    else:
-        add_nodes(G, 0, 2)
-        num_Nodes = G.number_of_nodes()
-        for n in range(1, 2):
-            parentNodes.append(num_Nodes-n)
-    count = 0
-    newparents = parentNodes
-    preNum = 111
-    while G.number_of_nodes() < maxNodes:
-        count += 1
-        #print(count)
-        print(G.number_of_nodes())
-        if preNum != G.number_of_nodes():
-            parentNodes = newparents
-            newparents = []
-        preNum = G.number_of_nodes()
-        for node in parentNodes:
-            if random.random() > p_split:
-                if random.random() > p_3:
-                    add_nodes(G, node, 5)
-                    num_Nodes = G.number_of_nodes()
-                    for n in range(1, 3):
-                        newparents.append(num_Nodes-n)
-                else:
-                    add_nodes(G, node, 3)
-                    num_Nodes = G.number_of_nodes()
-                    for n in range(1, 3):
-                        newparents.append(num_Nodes-n)
-
-        if preNum != G.number_of_nodes():
-            parentNodes = []
-    return G
-
-def makeDistanceMatrix(G, size):
-    Distance_Matrix = np.zeros((size, size))
-    for node in G.nodes():
-        p = nx.shortest_path(G, source=node)
-        for node1 in G.nodes():
-            if node != node1:
-                distance = len(p[node1])
-                Distance_Matrix[node-1][node1-1] = distance
-    return Distance_Matrix
-
-
-
-G = generate_gene_network(100, 0.3, 0.4)
+G = generate_Gene_tree(100)
 dm = makeDistanceMatrix(G, G.number_of_nodes())
-print(dm)
-pos = nx.spring_layout(G, seed=225)  # Seed for reproducible layout
-nx.draw(G)
-plt.show()
-exit()
+
+
+
+
+
+def get_3_4_neighbours(G, matrix):
+    nodeList = []
+    rownum = 0
+    for eachrow in matrix:
+        temp = []
+        row = eachrow.tolist()
+        #print(row)
+        for n in range(0, len(row)):
+            if (row[n] ==3 ):
+                temp.append(n)
+        nodeList.append(temp)
+        #print(temp)
+        rownum += 1
+        connected = False
+        if rownum > 1:
+            while connected == False:
+                #print('hit')
+                #print(temp)
+                for i in temp:
+                    if random.random() > 0.8:
+                        if i < rownum:
+                            pass
+                        #print(type(i))
+                        G.add_edge(rownum, i)
+                        pass
+                        connected = True
+    return G
+    print(nodeList)
+
+
+
+#G = generate_gene_network(100, 0.2, 0.2)
+#components = list(connected_components(G))
+#biggest_component_size = max(len(c) for c in components)
+#problem_components = [c for c in components if len(c) != biggest_component_size]
+#for component in problem_components:
+#    for node in component:
+#        G.remove_node(node)
+#print(is_connected(G))
+#G.delete_nodes_from(solitary)
+#print(nodes)
+#dm = makeDistanceMatrix(G, G.number_of_nodes())
+#G = get_3_4_neighbours(G, dm)
+#print(dm)
+#pos = nx.spring_layout(G, seed=225)  # Seed for reproducible layout
+#nx.draw(G)
+#plt.show()
+#exit()
 
 
 
@@ -124,7 +130,8 @@ class BoltzmannGRN():
         self.size = size
         #self.relationProbability = 0.1
         #self.graph = gnp_random_connected_graph(self.size, self.relationProbability)
-        self.graph = gnp_random_graph(self.size, 5)
+        #self.graph = gnp_random_graph(self.size, 5)
+        self.graph = generate_Gene_tree(size)
         self.matrix = make_wmatrix(self.graph, self.size)
         for node in self.graph.nodes:
             chance = random.random()
@@ -278,13 +285,14 @@ for i in range(0, size):
     title.append(str(i))
     listi.append('0')
 #listi = ['0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0']
-test = BoltzmannGRN(size)
+#
 #print(test.matrix)
-G = test.graph
+#G = test.graph
 t = 0
 
 
 #print(statedf)
+test = BoltzmannGRN(size)
 list_size = []
 list_states = []
 state_time = []
